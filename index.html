@@ -3,137 +3,1012 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Starz</title>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <title>Passthrough Proxy</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <!-- UV Static Required Scripts -->
+    <script src="uv/uv.bundle.js" defer></script>
+    <script src="uv/uv.config.js" defer></script>
+    <script src="register-sw.js" defer></script>
     <style>
-        body {
+        :root {
+            --primary: #6c5ce7;
+            --primary-light: #8075e7;
+            --secondary: #00b894;
+            --dark: #1e1e2e;
+            --light: #f5f6fa;
+            --error: #e74c3c;
+            --card-bg: rgba(30, 30, 46, 0.85);
+            --input-bg: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
             margin: 0;
-            background: black;
-            color: white;
-            font-family: 'Helvetica', sans-serif;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.25s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-            position: relative;
+            opacity: 0;
+            animation: fadeIn 0.8s ease-in forwards;
         }
-        .stars {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: -1;
-        }
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            opacity: 0.8;
-            animation: twinkle 2s infinite alternate, moveStars linear infinite;
-        }
-        @keyframes twinkle {
-            from { opacity: 0.3; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1.2); }
-        }
-        @keyframes moveStars {
-            from { transform: translateY(0); }
-            to { transform: translateY(100vh); }
-        }
-        .nav {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px 20px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            width: 70%;
-            justify-content: center;
-            backdrop-filter: blur(10px);
-            animation: fadeIn 1s ease-in-out;
-        }
-        .nav h2 {
-            font-size: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .search-box {
-            margin-top: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 15px;
-            width: 50%;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            animation: slideUp 1s ease-in-out;
-        }
-        .search-box input {
-            width: 90%;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            font-size: 16px;
-            text-align: center;
-            backdrop-filter: blur(5px);
-        }
-        .footer {
-            position: absolute;
-            bottom: 10px;
-            font-size: 14px;
-            opacity: 0.8;
-        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(108, 92, 231, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0); }
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            font-size: 28px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            flex-grow: 1;
+        }
+
+        .subtitle {
+            opacity: 0.8;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .url-input-container {
+            position: relative;
+            display: flex;
+            width: 100%;
+        }
+
+        #siteUrl {
+            flex-grow: 1;
+            padding: 14px 20px;
+            padding-left: 45px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            background: var(--input-bg);
+            color: var(--light);
+            outline: none;
+        }
+
+        #siteUrl:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2);
+        }
+
+        .url-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+        }
+
+        .load-btn {
+            margin-left: 10px;
+            padding: 0 25px;
+            height: 50px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .load-btn:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .load-btn:active {
+            transform: translateY(0);
+        }
+
+        .categories {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quick-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .quick-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 15px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .quick-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .quick-btn i {
+            font-size: 16px;
+        }
+
+        .frame-container {
+            flex-grow: 1;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card-bg);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 500px;
+        }
+
+        .frame-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .frame-title {
+            flex-grow: 1;
+            font-size: 14px;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .frame-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #webFrame {
+            width: 100%;
+            height: calc(100vh - 280px);
+            min-height: 400px;
+            border: none;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in 0.3s forwards;
+        }
+
+        .placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .placeholder i {
+            font-size: 48px;
+            opacity: 0.5;
+            color: var(--primary);
+        }
+
+        .placeholder-text {
+            font-size: 18px;
+            opacity: 0.6;
+            text-align: center;
+        }
+
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-container {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--error);
+            max-width: 80%;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .error-message {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .retry-btn {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .retry-btn:hover {
+            background: var(--primary-light);
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .tooltip:hover::before {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0.6;
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        .warning {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(231, 76, 60, 0.9);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 300px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            z-index: 100;
+            transform: translateX(120%);
+            animation: slideIn 0.5s forwards 2s;
+        }
+
+        @keyframes slideIn {
+            to { transform: translateX(0); }
+        }
+
+        .warning i {
+            color: white;
+            font-size: 20px;
+            margin-top: 2px;
+        }
+
+        .warning-text {
+            color: white;
+        }
+
+        .close-warning {
+            background: none;
+            border: none;
+            color: white;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        .close-warning:hover {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .url-input-container {
+                flex-direction: column;
+            }
+
+            .load-btn {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+            }
+
+            .quick-links {
+                flex-direction: column;
+            }
+
+            .quick-btn {
+                width: 100%;
+            }
+
+            #webFrame {
+                height: 500px;
+            }
+        }
+
+        /* Dark mode toggle */
+        .mode-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 3px;
+            cursor: pointer;
+        }
+
+        .mode-toggle::before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: var(--primary);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .mode-toggle.light::before {
+            transform: translateX(30px);
+        }
+
+        .mode-toggle .icon {
+            position: absolute;
+            top: 5px;
+            font-size: 14px;
+            z-index: 1;
+            color: white;
+        }
+
+        .mode-toggle .sun {
+            right: 8px;
+        }
+
+        .mode-toggle .moon {
+            left: 8px;
+        }
+
+        /* New Features */
+        .history-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .history-container.show {
+            max-height: 200px;
+            margin-top: 15px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .history-item-icon {
+            margin-right: 10px;
+            opacity: 0.7;
+        }
+
+        .history-item-url {
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 14px;
+        }
+
+        .history-item-time {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="stars" id="stars"></div>
-    <div class="nav">
-        <h2><i class="fas fa-star"></i> Starz</h2>
+    <div id="particles-js"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-ghost"></i>
+                <div>
+                    <h1>Passthrough Proxy</h1>
+                    <div class="subtitle">Unbl0cked websites at your fingertips</div>
+                </div>
+            </div>
+            <div class="mode-toggle" onclick="toggleDarkMode()">
+                <i class="fas fa-moon icon moon"></i>
+                <i class="fas fa-sun icon sun"></i>
+            </div>
+        </div>
+        
+        <div class="categories">
+            <div class="category-title">
+                <i class="fas fa-globe"></i>
+                <span>Navigate to Website</span>
+            </div>
+            
+            <div class="url-input-container">
+                <i class="fas fa-link url-icon"></i>
+                <input type="text" id="siteUrl" placeholder="Enter website URL (e.g. google.com)" 
+                    autocomplete="off" spellcheck="false">
+                <button class="load-btn" onclick="loadWebsite()">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>Go!</span>
+                </button>
+            </div>
+            
+            <div id="historyToggle" class="category-title" style="margin-top: 15px; cursor: pointer;">
+                <i class="fas fa-history"></i>
+                <span>Recent Sites</span>
+                <i class="fas fa-chevron-down" style="margin-left: auto;"></i>
+            </div>
+            
+            <div id="historyContainer" class="history-container">
+                <!-- History items will be added here by JavaScript -->
+            </div>
+            
+            <div class="category-title" style="margin-top: 15px;">
+                <i class="fas fa-bolt"></i>
+                <span>Quick Access</span>
+            </div>
+            
+            <div class="quick-links">
+                <button class="quick-btn" onclick="quickLoad('https://google.com')">
+                    <i class="fab fa-google"></i>
+                    <span>Google</span>
+                </button>
+                <button class="quick-btn" onclick="quickLoad('https://youtube.com')">
+                    <i class="fab fa-youtube"></i>
+                    <span>YouTube</span>
+                </button>
+                <button class="quick-btn" onclick="quickLoad('https://reddit.com')">
+                    <i class="fab fa-reddit"></i>
+                    <span>Reddit</span>
+                </button>
+                <button class="quick-btn" onclick="quickLoad('https://discord.com')">
+                    <i class="fab fa-discord"></i>
+                    <span>Discord</span>
+                </button>
+                <button class="quick-btn add-custom" onclick="addCustomSite()">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Custom</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="frame-container">
+            <div class="frame-header">
+                <div class="frame-title" id="frameTitle">No website loaded</div>
+                <div class="frame-controls">
+                    <button class="control-btn tooltip" data-tooltip="Refresh" onclick="refreshFrame()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="control-btn tooltip" data-tooltip="Fullscreen" onclick="toggleFullscreen()">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <iframe id="webFrame" allowfullscreen></iframe>
+            
+            <div class="placeholder" id="placeholder">
+                <i class="fas fa-globe"></i>
+                <div class="placeholder-text">Enter a URL above or select a quick access site to begin</div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <div>Loading website...</div>
+            </div>
+            
+            <div class="error-container" id="errorContainer">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="error-message" id="errorMessage">
+                    Unable to load website. The proxy may be experiencing issues.
+                </div>
+                <button class="retry-btn" onclick="tryAgain()">Try Again</button>
+            </div>
+        </div>
     </div>
-    <div class="search-box">
-        <form id="proxyForm">
-            <input type="text" id="proxyInput" placeholder="Type URL or search freely">
-        </form>
+    
+    <div class="footer">
+        UV Static Proxy © 2025 | Powered by Ultraviolet
     </div>
-    <div class="footer">Starz Proxy - Browse Freely</div>
+    
+    <div class="warning" id="warning">
+        <i class="fas fa-exclamation-circle"></i>
+        <div class="warning-text">
+            UV Static can access blocked sites! Use responsibly.
+        </div>
+        <button class="close-warning" onclick="closeWarning()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
     <script>
-        document.getElementById("proxyForm").addEventListener("submit", function(e) {
-            e.preventDefault();
-            let url = document.getElementById("proxyInput").value;
-            if (url) {
-                window.location.href = `active/${encodeURIComponent(url)}`;
+        // Initialize Ultraviolet
+        const uv = new Ultraviolet();
+        
+        // Register service worker
+        navigator.serviceWorker.register('./sw.js', {
+            scope: __uv$config.prefix
+        }).catch(err => {
+            console.error('Failed to register service worker:', err);
+        });
+        
+        // Initialize browsing history from localStorage
+        let browsingHistory = JSON.parse(localStorage.getItem('proxyHistory')) || [];
+        const MAX_HISTORY = 5;
+        
+        // Track if a site is loaded
+        let siteLoaded = false;
+        
+        // Update history display
+        function updateHistoryDisplay() {
+            const container = document.getElementById('historyContainer');
+            container.innerHTML = '';
+            
+            if (browsingHistory.length === 0) {
+                const emptyMessage = document.createElement('div');
+                emptyMessage.style.padding = '10px';
+                emptyMessage.style.opacity = '0.6';
+                emptyMessage.style.textAlign = 'center';
+                emptyMessage.innerText = 'No browsing history yet';
+                container.appendChild(emptyMessage);
+                return;
+            }
+            
+            browsingHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <i class="fas fa-globe history-item-icon"></i>
+                    <div class="history-item-url">${item.url}</div>
+                    <div class="history-item-time">${item.time}</div>
+                `;
+                historyItem.addEventListener('click', () => quickLoad(item.url));
+                container.appendChild(historyItem);
+            });
+        }
+        
+        // Add site to history
+        function addToHistory(url) {
+            // Format the URL for display (remove http/https)
+            let displayUrl = url;
+            if (displayUrl.startsWith('http://')) displayUrl = displayUrl.substring(7);
+            if (displayUrl.startsWith('https://')) displayUrl = displayUrl.substring(8);
+            
+            // Remove if already exists
+            browsingHistory = browsingHistory.filter(item => item.url !== url);
+            
+            // Add to beginning
+            browsingHistory.unshift({
+                url: url,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            
+            // Limit size
+            if (browsingHistory.length > MAX_HISTORY) {
+                browsingHistory.pop();
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('proxyHistory', JSON.stringify(browsingHistory));
+            
+            // Update display
+            updateHistoryDisplay();
+        }
+        
+        // Toggle history container
+        document.getElementById('historyToggle').addEventListener('click', function() {
+            const container = document.getElementById('historyContainer');
+            const icon = this.querySelector('.fa-chevron-down');
+            
+            if (container.classList.contains('show')) {
+                container.classList.remove('show');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                container.classList.add('show');
+                icon.style.transform = 'rotate(180deg)';
+                updateHistoryDisplay();
             }
         });
         
-        function createStars() {
-            const starContainer = document.getElementById("stars");
-            for (let i = 0; i < 250; i++) {
-                let star = document.createElement("div");
-                star.className = "star";
-                let x = Math.random() * window.innerWidth;
-                let y = Math.random() * window.innerHeight;
-                let size = Math.random() * 4;
-                let duration = Math.random() * 5 + 2;
-                star.style.left = `${x}px`;
-                star.style.top = `${y}px`;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.animationDuration = `${duration}s, ${duration * 2}s`;
-                starContainer.appendChild(star);
+        // Load website function
+        function loadWebsite() {
+            let url = document.getElementById('siteUrl').value.trim();
+            if (!url) return;
+            
+            // Add protocol if it doesn't exist
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url = "https://" + url;
+            }
+            
+            loadUrl(url);
+        }
+        
+        // Quick load function
+        function quickLoad(url) {
+            document.getElementById('siteUrl').value = url;
+            loadUrl(url);
+        }
+        
+        // Common URL loading function
+        function loadUrl(url) {
+            // Show loading state
+            document.getElementById('placeholder').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('webFrame').style.opacity = '0';
+            
+            // Update frame title
+            document.getElementById('frameTitle').innerText = 'Loading: ' + url;
+            
+            try {
+                // Create the proxied URL using Ultraviolet
+                const encodedUrl = __uv$config.encodeUrl(url);
+                const proxyUrl = __uv$config.prefix + encodedUrl;
+                
+                // Load the URL
+                const frame = document.getElementById('webFrame');
+                
+                // Set up load event handlers
+                frame.onload = function() {
+                    document.getElementById('loading').style.display = 'none';
+                    frame.style.opacity = '1';
+                    document.getElementById('frameTitle').innerText = url;
+                    siteLoaded = true;
+                    
+                    // Add to history
+                    addToHistory(url);
+                };
+                
+                frame.onerror = function() {
+                    showError('The website could not be loaded through the proxy.');
+                };
+                
+                // Set timeout for loading
+                setTimeout(function() {
+                    if (frame.style.opacity !== '1') {
+                        // If still loading after timeout, assume it loaded
+                        try {
+                            frame.onload();
+                        } catch (e) {
+                            showError('Website load timed out. The proxy may be experiencing issues.');
+                        }
+                    }
+                }, 8000);
+                
+                // Set the src to load the URL through UV proxy
+                frame.src = proxyUrl;
+                
+            } catch (err) {
+                showError('Failed to initialize the proxy: ' + err.message);
             }
         }
-        createStars();
-    </script>
-</body>
-</html>
+        
+        // Show error function
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'block';
+            document.getElementById('errorMessage').innerText = message;
+            document.getElementById('frameTitle').innerText = 'Error loading website';
+        }
+        
+        // Try loading again after error
+        function tryAgain() {
+            loadWebsite();
+        }
+        
+        // Refresh the current frame
+        function refreshFrame() {
+            if (siteLoaded) {
+                const frame = document.getElementById('webFrame');
+                frame.src = frame.src;
+            }
+        }
+        
+        // Toggle fullscreen
+        function toggleFullscreen() {
+            const frame = document.getElementById('webFrame');
+            
+            if (!document.fullscreenElement) {
+                if (frame.requestFullscreen) {
+                    frame.requestFullscreen();
+                } else if (frame.mozRequestFullScreen) {
+                    frame.mozRequestFullScreen();
+                } else if (frame.webkitRequestFullscreen) {
+                    frame.webkitRequestFullscreen();
+                } else if (frame.msRequestFullscreen) {
+                    frame.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+        
+        // Close warning message
+        function closeWarning() {
+            document.getElementById('warning').style.display = 'none';
+        }
+        
+        // Toggle dark/light mode
+        function toggleDarkMode() {
+            const body = document.body;
+            const toggle = document.querySelector('.mode-toggle');
+            
+            if (toggle.classList.contains('light')) {
+                // Switch to dark mode
+                toggle.classList.remove('light');
+                document.documentElement.style.setProperty('--dark', '#1e1e2e');
+                document.documentElement.style.setProperty('--light', '#f5f6fa');
+                document.documentElement.style.setProperty('--card-bg', 'rgba(30, 30, 46, 0.85)');
+            } else {
+                // Switch to light mode
+                toggle.classList.add('light');
+                document.documentElement.style.setProperty('--dark', '#f5f6fa');
+                document.documentElement.style.setProperty('--light', '#1e1e2e');
+                document.documentElement.style.setProperty('--card-bg', 'rgba(245, 246, 250, 0.85)');
+            }
+        }
+        
+        // Add custom site function
+        function addCustomSite() {
+            const name = prompt('Enter a name for this site:');
+            if (!name) return;
+            
+            const url = prompt('Enter the URL:');
+            if (!url) return;
+            
+            // Add new button to quick links
+            const quickLinks = document.querySelector('.quick-links');
+            const newButton = document.createElement('button');
+            newButton.className = 'quick-btn';
+            newButton.innerHTML = `
+                <i class="fas fa-star"></i>
+                <span>${name}</span>
+            `;
+            newButton.onclick = function() {
+                quickLoad(url.startsWith('http') ? url : 'https://' + url);
+            };
+            
+            // Insert before the "Add Custom" button
+            quickLinks.insertBefore(newButton, document.querySelector('.add-custom'));
+            
+            // Save to localStorage (basic implementation)
+            const customSites = JSON.parse(localStorage.getItem('customSites')) || [];
+            customSites.push({ name, url });
+            localStorage.setItem('customSites', JSON.stringify(customSites));
+        }
+        
+       // Load custom sites on page load
+function loadCustomSites() {
+    const customSites = JSON.parse(localStorage.getItem('customSites')) || [];
+    const quickLinks = document.querySelector('.quick-links');
+    const addButton = document.querySelector('.add-custom');
+    
+    customSites.forEach(site => {
+        const newButton = document.createElement('button');
+        newButton.className = 'quick-btn';
+        newButton.innerHTML = `
+            <i class="fas fa-star"></i>
+            <span>${site.name}</span>
+        `;
+        newButton.onclick = function() {
+            quickLoad(site.url.startsWith('http') ? site.url : 'https://' + site.url);
+        };
+        
+        // Insert before the "Add Custom" button
+        quickLinks.insertBefore(newButton, addButton);
+    });
+}
+
+// Initialize particles.js
+document.addEventListener('DOMContentLoaded', function() {
+    // Load custom sites
+    loadCustomSites();
+    
+    // Initialize history display
+    updateHistoryDisplay();
+    
+    // Initialize particles.js
+    particlesJS('particles-js', {
+        particles: {
+            number: { value: 80, density: { enable: true, value_area: 800 } },
+            color: { value: '#6c5ce7' },
+            shape: { type: 'circle' },
+            opacity: { value: 0.5, random: true },
+            size: { value: 3, random: true },
+            line_linked: {
+                enable: true,
+                distance: 150,
+                color: '#6c5ce7',
+                opacity: 0.4,
+                width: 1
+            },
+            move: {
+                enable: true,
+                speed: 1,
+                direction: 'none',
+                random: true,
+                out_mode: 'out'
+            }
+        },
+        interactivity: {
+            detect_on: 'canvas',
+            events: {
+                onhover: { enable: true, mode: 'grab' },
+                onclick: { enable: true, mode: 'push' }
+            },
+            modes: {
+                grab: { distance: 140, line_linked: { opacity: 1 } },
+                push: { particles_nb: 4 }
+            }
+        }
+    });
+    
+    // Add enter key listener for URL input
+    document.getElementById('siteUrl').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            loadWebsite();
+        }
+    });
+});
