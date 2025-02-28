@@ -6,10 +6,12 @@
     <title>Passthrough Proxy</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <!-- UV Static Required Scripts -->
-    <script src="uv/uv.bundle.js" defer></script>
-    <script src="uv/uv.config.js" defer></script>
-    <script src="register-sw.js" defer></script>
+    
+    <!-- UV Static Required Scripts - Make sure these files exist in your project -->
+    <script src="uv/uv.bundle.js"></script>
+    <script src="uv/uv.config.js"></script>
+    <script src="register-sw.js"></script>
+    
     <style>
         :root {
             --primary: #6c5ce7;
@@ -549,6 +551,15 @@
             opacity: 0.6;
             margin-left: 10px;
         }
+        
+        .debug-info {
+            padding: 10px;
+            margin-top: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-family: monospace;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -634,6 +645,9 @@
                     <button class="control-btn tooltip" data-tooltip="Fullscreen" onclick="toggleFullscreen()">
                         <i class="fas fa-expand"></i>
                     </button>
+                    <button class="control-btn tooltip" data-tooltip="Debug Info" onclick="toggleDebug()">
+                        <i class="fas fa-bug"></i>
+                    </button>
                 </div>
             </div>
             
@@ -658,6 +672,8 @@
                 </div>
                 <button class="retry-btn" onclick="tryAgain()">Try Again</button>
             </div>
+            
+            <div id="debugInfo" class="debug-info"></div>
         </div>
     </div>
     
@@ -668,23 +684,62 @@
     <div class="warning" id="warning">
         <i class="fas fa-exclamation-circle"></i>
         <div class="warning-text">
-            UV Static can access blocked sites! Use responsibly.
+            This proxy requires additional files to work: uv.bundle.js, uv.config.js, and a bare server.
         </div>
         <button class="close-warning" onclick="closeWarning()">
             <i class="fas fa-times"></i>
         </button>
     </div>
 
+    <!-- Create uv.config.js if it doesn't exist -->
     <script>
-        // Initialize Ultraviolet
-        const uv = new Ultraviolet();
+        // Check if UV config exists, if not create it
+        function ensureUVConfig() {
+            if (typeof __uv$config === 'undefined') {
+                console.warn("UV Config not found, creating default config");
+                
+                // Create config object
+                window.__uv$config = {
+                    prefix: '/service/',
+                    bare: '/bare/',
+                    encodeUrl: function(url) {
+                        return btoa(url);
+                    },
+                    decodeUrl: function(encoded) {
+                        return atob(encoded);
+                    }
+                };
+                
+                // Log the created config
+                updateDebugInfo("Created default UV config");
+            } else {
+                updateDebugInfo("UV Config found");
+            }
+        }
+    </script>
+
+    <script>
+        // Debug functions
+        function updateDebugInfo(message) {
+            const debugInfo = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugInfo.innerHTML += `[${timestamp}] ${message}<br>`;
+            
+            // Auto-scroll to bottom
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+            
+            // Also log to console
+            console.log(message);
+        }
         
-        // Register service worker
-        navigator.serviceWorker.register('./sw.js', {
-            scope: __uv$config.prefix
-        }).catch(err => {
-            console.error('Failed to register service worker:', err);
-        });
+        function toggleDebug() {
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugInfo.style.display === 'block') {
+                debugInfo.style.display = 'none';
+            } else {
+                debugInfo.style.display = 'block';
+            }
+        }
         
         // Initialize browsing history from localStorage
         let browsingHistory = JSON.parse(localStorage.getItem('proxyHistory')) || [];
@@ -692,6 +747,30 @@
         
         // Track if a site is loaded
         let siteLoaded = false;
+        
+        // Check if Ultraviolet is available
+        function checkUV() {
+            ensureUVConfig();
+            
+            if (typeof window.Ultraviolet === 'undefined') {
+                updateDebugInfo("Warning: Ultraviolet constructor not found");
+                return false;
+            }
+            
+            updateDebugInfo("Ultraviolet constructor found");
+            return true;
+        }
+        
+        // Check service worker
+        function checkServiceWorker() {
+            if (!('serviceWorker' in navigator)) {
+                updateDebugInfo("Warning: Service Workers not supported in this browser");
+                return false;
+            }
+            
+            updateDebugInfo("Service Workers supported");
+            return true;
+        }
         
         // Update history display
         function updateHistoryDisplay() {
@@ -785,6 +864,8 @@
         
         // Common URL loading function
         function loadUrl(url) {
+            updateDebugInfo(`Attempting to load: ${url}`);
+            
             // Show loading state
             document.getElementById('placeholder').style.display = 'none';
             document.getElementById('loading').style.display = 'block';
@@ -794,10 +875,32 @@
             // Update frame title
             document.getElementById('frameTitle').innerText = 'Loading: ' + url;
             
+            // Ensure UV is available
+            if (!checkUV()) {
+                showError('Ultraviolet proxy is not available. Please make sure uv.bundle.js is loaded correctly.');
+                return;
+            }
+            
             try {
-                // Create the proxied URL using Ultraviolet
-                const encodedUrl = __uv$config.encodeUrl(url);
-                const proxyUrl = __uv$config.prefix + encodedUrl;
+                // Add protocol if it doesn't exist
+                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    url = "https://" + url;
+                }
+                
+                // Create the proxied URL
+                let proxyUrl;
+                
+                try {
+                    // Try using UV config if available
+                    const encodedUrl = __uv$config.encodeUrl(url);
+                    proxyUrl = __uv$config.prefix + encodedUrl;
+                    updateDebugInfo(`Encoded URL with UV config: ${proxyUrl}`);
+                } catch (e) {
+                    // Fallback to simple encoding
+                    updateDebugInfo(`UV encoding failed: ${e.message}`);
+                    proxyUrl = '/service/' + btoa(url);
+                    updateDebugInfo(`Using fallback encoding: ${proxyUrl}`);
+                }
                 
                 // Load the URL
                 const frame = document.getElementById('webFrame');
@@ -808,31 +911,39 @@
                     frame.style.opacity = '1';
                     document.getElementById('frameTitle').innerText = url;
                     siteLoaded = true;
+                    updateDebugInfo(`Frame loaded successfully for ${url}`);
                     
                     // Add to history
                     addToHistory(url);
                 };
                 
-                frame.onerror = function() {
+                frame.onerror = function(e) {
+                    updateDebugInfo(`Frame error: ${e}`);
                     showError('The website could not be loaded through the proxy.');
                 };
                 
                 // Set timeout for loading
                 setTimeout(function() {
                     if (frame.style.opacity !== '1') {
-                        // If still loading after timeout, assume it loaded
+                        // Check if still loading after timeout
                         try {
-                            frame.onload();
+                            updateDebugInfo(`Load timeout reached for ${url}`);
+                            document.getElementById('loading').style.display = 'none';
+                            frame.style.opacity = '1';
+                            siteLoaded = true;
                         } catch (e) {
+                            updateDebugInfo(`Error handling timeout: ${e.message}`);
                             showError('Website load timed out. The proxy may be experiencing issues.');
                         }
                     }
                 }, 8000);
                 
-                // Set the src to load the URL through UV proxy
+                // Set the src to load the URL through proxy
+                updateDebugInfo(`Setting iframe src to: ${proxyUrl}`);
                 frame.src = proxyUrl;
                 
             } catch (err) {
+                updateDebugInfo(`Error initializing proxy: ${err.message}`);
                 showError('Failed to initialize the proxy: ' + err.message);
             }
         }
@@ -843,6 +954,7 @@
             document.getElementById('errorContainer').style.display = 'block';
             document.getElementById('errorMessage').innerText = message;
             document.getElementById('frameTitle').innerText = 'Error loading website';
+            updateDebugInfo(`Error: ${message}`);
         }
         
         // Try loading again after error
@@ -850,165 +962,197 @@
             loadWebsite();
         }
         
-        // Refresh the current frame
-        function refreshFrame() {
-            if (siteLoaded) {
-                const frame = document.getElementById('webFrame');
-                frame.src = frame.src;
-            }
-        }
-        
-        // Toggle fullscreen
-        function toggleFullscreen() {
-            const frame = document.getElementById('webFrame');
-            
-            if (!document.fullscreenElement) {
-                if (frame.requestFullscreen) {
-                    frame.requestFullscreen();
-                } else if (frame.mozRequestFullScreen) {
-                    frame.mozRequestFullScreen();
-                } else if (frame.webkitRequestFullscreen) {
-                    frame.webkitRequestFullscreen();
-                } else if (frame.msRequestFullscreen) {
-                    frame.msRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-            }
-        }
-        
-        // Close warning message
-        function closeWarning() {
-            document.getElementById('warning').style.display = 'none';
-        }
-        
-        // Toggle dark/light mode
-        function toggleDarkMode() {
-            const body = document.body;
-            const toggle = document.querySelector('.mode-toggle');
-            
-            if (toggle.classList.contains('light')) {
-                // Switch to dark mode
-                toggle.classList.remove('light');
-                document.documentElement.style.setProperty('--dark', '#1e1e2e');
-                document.documentElement.style.setProperty('--light', '#f5f6fa');
-                document.documentElement.style.setProperty('--card-bg', 'rgba(30, 30, 46, 0.85)');
-            } else {
-                // Switch to light mode
-                toggle.classList.add('light');
-                document.documentElement.style.setProperty('--dark', '#f5f6fa');
-                document.documentElement.style.setProperty('--light', '#1e1e2e');
-                document.documentElement.style.setProperty('--card-bg', 'rgba(245, 246, 250, 0.85)');
-            }
-        }
-        
-        // Add custom site function
-        function addCustomSite() {
-            const name = prompt('Enter a name for this site:');
-            if (!name) return;
-            
-            const url = prompt('Enter the URL:');
-            if (!url) return;
-            
-            // Add new button to quick links
-            const quickLinks = document.querySelector('.quick-links');
-            const newButton = document.createElement('button');
-            newButton.className = 'quick-btn';
-            newButton.innerHTML = `
-                <i class="fas fa-star"></i>
-                <span>${name}</span>
-            `;
-            newButton.onclick = function() {
-                quickLoad(url.startsWith('http') ? url : 'https://' + url);
-            };
-            
-            // Insert before the "Add Custom" button
-            quickLinks.insertBefore(newButton, document.querySelector('.add-custom'));
-            
-            // Save to localStorage (basic implementation)
-            const customSites = JSON.parse(localStorage.getItem('customSites')) || [];
-            customSites.push({ name, url });
-            localStorage.setItem('customSites', JSON.stringify(customSites));
-        }
-        
-       // Load custom sites on page load
-function loadCustomSites() {
-    const customSites = JSON.parse(localStorage.getItem('customSites')) || [];
-    const quickLinks = document.querySelector('.quick-links');
-    const addButton = document.querySelector('.add-custom');
+       // Refresh the current frame
+function refreshFrame() {
+    if (siteLoaded) {
+        const frame = document.getElementById('webFrame');
+        updateDebugInfo("Refreshing current page");
+        frame.src = frame.src;
+    } else {
+        updateDebugInfo("No page loaded to refresh");
+    }
+}
+
+// Toggle fullscreen for the iframe
+function toggleFullscreen() {
+    const frameContainer = document.querySelector('.frame-container');
     
-    customSites.forEach(site => {
-        const newButton = document.createElement('button');
-        newButton.className = 'quick-btn';
-        newButton.innerHTML = `
-            <i class="fas fa-star"></i>
-            <span>${site.name}</span>
-        `;
-        newButton.onclick = function() {
-            quickLoad(site.url.startsWith('http') ? site.url : 'https://' + site.url);
-        };
-        
-        // Insert before the "Add Custom" button
-        quickLinks.insertBefore(newButton, addButton);
-    });
+    if (!document.fullscreenElement) {
+        if (frameContainer.requestFullscreen) {
+            frameContainer.requestFullscreen();
+        } else if (frameContainer.mozRequestFullScreen) { // Firefox
+            frameContainer.mozRequestFullScreen();
+        } else if (frameContainer.webkitRequestFullscreen) { // Chrome, Safari and Opera
+            frameContainer.webkitRequestFullscreen();
+        } else if (frameContainer.msRequestFullscreen) { // IE/Edge
+            frameContainer.msRequestFullscreen();
+        }
+        updateDebugInfo("Entering fullscreen mode");
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+        updateDebugInfo("Exiting fullscreen mode");
+    }
+}
+
+// Close warning message
+function closeWarning() {
+    document.getElementById('warning').style.display = 'none';
+}
+
+// Toggle dark/light mode
+function toggleDarkMode() {
+    const toggle = document.querySelector('.mode-toggle');
+    toggle.classList.toggle('light');
+    
+    if (toggle.classList.contains('light')) {
+        document.documentElement.style.setProperty('--dark', '#f5f6fa');
+        document.documentElement.style.setProperty('--light', '#1e1e2e');
+        document.documentElement.style.setProperty('--card-bg', 'rgba(245, 246, 250, 0.85)');
+        document.body.style.background = '#f5f6fa';
+        updateDebugInfo("Switched to light mode");
+    } else {
+        document.documentElement.style.setProperty('--dark', '#1e1e2e');
+        document.documentElement.style.setProperty('--light', '#f5f6fa');
+        document.documentElement.style.setProperty('--card-bg', 'rgba(30, 30, 46, 0.85)');
+        document.body.style.background = '#1e1e2e';
+        updateDebugInfo("Switched to dark mode");
+    }
+}
+
+// Add custom site to quick links
+function addCustomSite() {
+    const url = prompt("Enter the URL of the website you want to add:");
+    if (!url) return;
+    
+    const name = prompt("Enter a name for this website:");
+    if (!name) return;
+    
+    // Create a new button
+    const quickLinks = document.querySelector('.quick-links');
+    const newButton = document.createElement('button');
+    newButton.className = 'quick-btn';
+    newButton.innerHTML = `
+        <i class="fas fa-star"></i>
+        <span>${name}</span>
+    `;
+    
+    // Format URL for loading
+    let formattedUrl = url;
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        formattedUrl = "https://" + url;
+    }
+    
+    // Add click handler
+    newButton.addEventListener('click', () => quickLoad(formattedUrl));
+    
+    // Add before the "Add Custom" button
+    const addButton = document.querySelector('.add-custom');
+    quickLinks.insertBefore(newButton, addButton);
+    
+    updateDebugInfo(`Added custom site: ${name} (${formattedUrl})`);
 }
 
 // Initialize particles.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Load custom sites
-    loadCustomSites();
-    
-    // Initialize history display
-    updateHistoryDisplay();
-    
-    // Initialize particles.js
-    particlesJS('particles-js', {
-        particles: {
-            number: { value: 80, density: { enable: true, value_area: 800 } },
-            color: { value: '#6c5ce7' },
-            shape: { type: 'circle' },
-            opacity: { value: 0.5, random: true },
-            size: { value: 3, random: true },
-            line_linked: {
-                enable: true,
-                distance: 150,
-                color: '#6c5ce7',
-                opacity: 0.4,
-                width: 1
+    try {
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 80, density: { enable: true, value_area: 800 } },
+                color: { value: '#6c5ce7' },
+                shape: { type: 'circle' },
+                opacity: { value: 0.5, random: false },
+                size: { value: 3, random: true },
+                line_linked: {
+                    enable: true,
+                    distance: 150,
+                    color: '#6c5ce7',
+                    opacity: 0.4,
+                    width: 1
+                },
+                move: {
+                    enable: true,
+                    speed: 2,
+                    direction: 'none',
+                    random: false,
+                    straight: false,
+                    out_mode: 'out',
+                    bounce: false
+                }
             },
-            move: {
-                enable: true,
-                speed: 1,
-                direction: 'none',
-                random: true,
-                out_mode: 'out'
-            }
-        },
-        interactivity: {
-            detect_on: 'canvas',
-            events: {
-                onhover: { enable: true, mode: 'grab' },
-                onclick: { enable: true, mode: 'push' }
+            interactivity: {
+                detect_on: 'canvas',
+                events: {
+                    onhover: { enable: true, mode: 'grab' },
+                    onclick: { enable: true, mode: 'push' },
+                    resize: true
+                },
+                modes: {
+                    grab: { distance: 140, line_linked: { opacity: 1 } },
+                    push: { particles_nb: 4 }
+                }
             },
-            modes: {
-                grab: { distance: 140, line_linked: { opacity: 1 } },
-                push: { particles_nb: 4 }
-            }
-        }
-    });
-    
-    // Add enter key listener for URL input
-    document.getElementById('siteUrl').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            loadWebsite();
-        }
-    });
+            retina_detect: true
+        });
+        
+        updateDebugInfo("Particles.js initialized");
+        
+        // Initialize history display
+        updateHistoryDisplay();
+        
+        // Check if UV config and service worker are available
+        setTimeout(() => {
+            checkUV();
+            checkServiceWorker();
+        }, 1000);
+        
+    } catch (e) {
+        console.error("Error initializing: " + e.message);
+        updateDebugInfo("Error initializing: " + e.message);
+    }
 });
+
+// Allow Enter key in the URL input
+document.getElementById('siteUrl').addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+        loadWebsite();
+    }
+});
+
+// Register service worker if available 
+async function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        try {
+            await navigator.serviceWorker.register('./sw.js', {
+                scope: __uv$config.prefix
+            });
+            updateDebugInfo("Service worker registered successfully");
+        } catch (err) {
+            updateDebugInfo("Failed to register service worker: " + err.message);
+        }
+    } else {
+        updateDebugInfo("Service workers not supported in this browser");
+    }
+}
+
+// Call this function to register if using "register-sw.js"
+if (typeof registerSW === 'function') {
+    try {
+        registerSW();
+        updateDebugInfo("Called external registerSW function");
+    } catch (e) {
+        updateDebugInfo("Error calling registerSW: " + e.message);
+        // Fallback to our own implementation
+        registerServiceWorker();
+    }
+} else {
+    updateDebugInfo("External registerSW function not found, using built-in");
+    registerServiceWorker();
+}
